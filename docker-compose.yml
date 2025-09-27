@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: nextauth-template
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nextauth-template"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    ports:
+      - "3000:3000"
+    environment:
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/nextauth-template?schema=public
+      - NEXTAUTH_URL=http://localhost:3000
+      - AUTH_SECRET=your-secret-key-here-32-chars-long
+      - AUTH_TRUST_HOST=true
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  seeder:
+    image: curlimages/curl:latest
+    container_name: seeder
+    depends_on:
+      - app
+    volumes:
+      - ./docker/seed.sh:/seed.sh
+    entrypoint: ["/bin/sh", "/seed.sh"]
+    restart: "no"
+
+volumes:
+  postgres_data:
