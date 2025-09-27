@@ -109,4 +109,8 @@ export async function GET() {
   //     availableAt: new Date()
   //   }
   // ]);
+
+  // return Response.json({
+  //   message: 'Success Seeded data.!!!'
+  // });
 }
